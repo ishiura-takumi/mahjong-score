@@ -1,103 +1,271 @@
-import Image from "next/image";
+"use client";
+import React, { useState, useMemo } from 'react';
+import axios from 'axios'; // axiosをインポート
 
-export default function Home() {
-  return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm/6 text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-[family-name:var(--font-geist-mono)] font-semibold">
-              app/page.tsx
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
+// --- Helper Components ---
+//起動コマンドはyarn dev -p 4000
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+// TileIcon: Displays the character/symbol on the tile
+const TileIcon = ({ type, value, isRed }) => {
+    const baseStyle = "font-bold text-lg select-none";
+    if (isRed) return <span className={`${baseStyle} text-red-500`}>{value}</span>;
+    switch (type) {
+        case 'm': return <span className={`${baseStyle} text-gray-800`}>{value}</span>;
+        case 'p': return <span className={`${baseStyle} text-blue-600`}>{value}</span>;
+        case 's': return <span className={`${baseStyle} text-green-600`}>{value}</span>;
+        case 'z':
+            const jihai = ['東', '南', '西', '北', '白', '發', '中'];
+            return <span className={`${baseStyle} text-gray-800`}>{jihai[value - 1]}</span>;
+        default: return null;
+    }
+};
+
+// Tile: Displays a single tile visual
+const Tile = ({ tile, onClick, isHandTile = false, isWinningTile = false }) => {
+    const redDoraClass = tile?.isRed ? 'border-red-500 shadow-red-300/50' : 'border-gray-300';
+    // NEW: Style for the winning tile
+    const winningTileClass = isWinningTile ? 'ring-4 ring-offset-2 ring-blue-500 shadow-lg' : '';
+    const tileStyle = `w-12 h-16 md:w-14 md:h-20 bg-white border-2 rounded-md flex items-center justify-center shadow-md transition-all duration-200 ${isHandTile ? 'cursor-pointer hover:shadow-lg hover:-translate-y-1' : ''} ${redDoraClass} ${winningTileClass}`;
+    
+    return (
+        <div className={tileStyle} onClick={onClick}>
+            {tile ? <TileIcon type={tile.type} value={tile.value} isRed={tile.isRed} /> : null}
         </div>
-      </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
-    </div>
-  );
+    );
+};
+
+// MeldModal: Popup for creating a meld
+const MeldModal = ({ type, onAddMeld, onClose }) => {
+    const TILE_DATA = useMemo(() => ({
+        man: Array.from({ length: 9 }, (_, i) => ({ type: 'm', value: i + 1 })),
+        pin: Array.from({ length: 9 }, (_, i) => ({ type: 'p', value: i + 1 })),
+        sou: Array.from({ length: 9 }, (_, i) => ({ type: 's', value: i + 1 })),
+        jihai: Array.from({ length: 7 }, (_, i) => ({ type: 'z', value: i + 1 })),
+    }), []);
+    
+    const getSelectableTiles = () => {
+        const allTiles = [...TILE_DATA.man, ...TILE_DATA.pin, ...TILE_DATA.sou, ...TILE_DATA.jihai];
+        if (type === 'chi') {
+            return [...TILE_DATA.man, ...TILE_DATA.pin, ...TILE_DATA.sou].filter(t => t.value <= 7);
+        }
+        return allTiles; // Pon and Kan can use any tile
+    };
+
+    const handleTileSelect = (tile) => {
+        let newMeld;
+        switch (type) {
+            case 'pon':
+                newMeld = { type, tiles: [tile, tile, tile] };
+                break;
+            case 'chi':
+                newMeld = { type, tiles: [tile, { ...tile, value: tile.value + 1 }, { ...tile, value: tile.value + 2 }] };
+                break;
+            case 'kan':
+                newMeld = { type, tiles: [tile, tile, tile, tile] };
+                break;
+            default:
+                return;
+        }
+        onAddMeld(newMeld);
+    };
+
+    return (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+            <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[80vh] flex flex-col">
+                <div className="p-4 border-b flex justify-between items-center">
+                    <h3 className="text-xl font-bold text-gray-800">
+                        {type === 'pon' && 'ポンする牌を選択'}
+                        {type === 'chi' && 'チーする最初の牌を選択'}
+                        {type === 'kan' && 'カンする牌を選択'}
+                    </h3>
+                    <button onClick={onClose} className="text-gray-500 hover:text-gray-800 font-bold text-2xl">&times;</button>
+                </div>
+                <div className="p-4 overflow-y-auto">
+                    <div className="grid grid-cols-5 sm:grid-cols-9 gap-2">
+                        {getSelectableTiles().map(t => (
+                            <button
+                                key={`${t.type}${t.value}`}
+                                onClick={() => handleTileSelect(t)}
+                                className="w-12 h-16 md:w-14 md:h-20 bg-white border-2 border-gray-300 rounded-md flex items-center justify-center shadow-md hover:border-blue-500"
+                            >
+                                <TileIcon type={t.type} value={t.value} />
+                            </button>
+                        ))}
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+};
+
+// --- Main App Component ---
+export default function MahjongInput() {
+    const [hand, setHand] = useState([]);
+    const [furo, setFuro] = useState([]);
+    const [winTile, setWinTile] = useState(null); // NEW: State for the winning tile
+    const [activeTab, setActiveTab] = useState('man');
+    const [modalState, setModalState] = useState({ isOpen: false, type: null });
+    const [result, setResult] = useState(null);
+    const [isLoading, setIsLoading] = useState(false);
+
+    const totalTiles = useMemo(() => hand.length + furo.reduce((sum, meld) => sum + meld.tiles.length, 0), [hand, furo]);
+
+    const TILE_DATA = useMemo(() => ({
+        man: Array.from({ length: 9 }, (_, i) => ({ type: 'm', value: i + 1 })),
+        pin: Array.from({ length: 9 }, (_, i) => ({ type: 'p', value: i + 1 })),
+        sou: Array.from({ length: 9 }, (_, i) => ({ type: 's', value: i + 1 })),
+        jihai: Array.from({ length: 7 }, (_, i) => ({ type: 'z', value: i + 1 })),
+    }), []);
+
+    const addTileToHand = (tile) => {
+        if (totalTiles < 14) {
+            setHand([...hand, { ...tile, id: Date.now() + Math.random(), isRed: false }]);
+        }
+    };
+
+    // Modified click handler
+    const handleHandTileClick = (clickedTile) => {
+        // Allow selecting winning tile only when hand is full
+        if (totalTiles === 14) {
+             // If the clicked tile is already the winning tile, deselect it. Otherwise, select it.
+             setWinTile(winTile?.id === clickedTile.id ? null : clickedTile);
+        } else {
+             // Default behavior: remove tile from hand before it's full.
+            setHand(hand.filter(t => t.id !== clickedTile.id));
+        }
+    };
+    
+    const addMeld = (meld) => {
+        const meldTilesCount = meld.tiles.length;
+        if (totalTiles - 1 + meldTilesCount > 14 || furo.length >= 4) {
+             alert("これ以上副露できません。");
+             setModalState({ isOpen: false, type: null });
+             return;
+        }
+        setFuro([...furo, { ...meld, id: Date.now() + Math.random() }]);
+        setModalState({ isOpen: false, type: null });
+    };
+
+    const removeMeld = (meldId) => {
+        setFuro(furo.filter(f => f.id !== meldId));
+    };
+
+    const sortHand = () => {
+        const typeOrder = { 'm': 1, 'p': 2, 's': 3, 'z': 4 };
+        const sortedHand = [...hand].sort((a, b) => {
+            const typeComparison = typeOrder[a.type] - typeOrder[b.type];
+            if (typeComparison !== 0) return typeComparison;
+            return a.value - b.value;
+        });
+        setHand(sortedHand);
+    };
+
+    const handleCalculate = async () => {
+        if (!winTile) {
+            alert("和了牌を選択してください。");
+            return;
+        }
+        setIsLoading(true);
+        setResult(null);
+
+        const apiHand = hand.map(({ id, isRed, ...rest }) => ({...rest, isRed: isRed}));
+        const apiFuro = furo.map(({ id, ...meld }) => ({ ...meld, tiles: meld.tiles.map(({ id, isRed, ...tile }) => ({...tile, isRed: isRed})) }));
+        const apiWinTile = { type: winTile.type, value: winTile.value, isRed: winTile.isRed };
+
+        try {
+            const response = await axios.post('http://127.0.0.1:8000/calculate', {
+                hand: apiHand,
+                furo: apiFuro,
+                win_tile: apiWinTile, // NEW: Send winning tile
+            });
+            setResult(response.data);
+        } catch (error) {
+            console.error("API Error:", error);
+            setResult({ error: "計算サーバーとの通信に失敗しました。" });
+        } finally {
+            setIsLoading(false);
+        }
+    };
+    
+    // UI Text for instructions
+    const instructionText = totalTiles === 14 
+        ? "和了牌をクリックして選択" 
+        : `${14 - totalTiles}枚入力してください`;
+
+    return (
+        <div className="bg-gray-100 min-h-screen p-4 md:p-8 flex flex-col font-sans">
+            {modalState.isOpen && ( <MeldModal type={modalState.type} onAddMeld={addMeld} onClose={() => setModalState({ isOpen: false, type: null })} /> )}
+
+            <div className="w-full max-w-4xl mx-auto bg-white rounded-2xl shadow-lg flex flex-col flex-grow">
+                {/* --- Hand & Furo Display Area --- */}
+                 <div className="p-4 md:p-6 border-b border-gray-200">
+                    <div className="flex justify-between items-center mb-2">
+                         <h2 className="text-xl font-bold text-gray-700">手牌</h2>
+                         <span className="font-semibold text-blue-600">{instructionText}</span>
+                         <div className="flex items-center gap-4">
+                            <button onClick={sortHand} className="text-sm font-semibold text-blue-600 hover:text-blue-800" disabled={hand.length === 0}>並び替え</button>
+                             <button onClick={() => {setHand([]); setFuro([]); setWinTile(null); setResult(null);}} className="text-sm text-gray-500 hover:text-red-600">全てクリア</button>
+                         </div>
+                    </div>
+                    <div className="bg-green-800 p-3 rounded-lg flex flex-wrap gap-2 min-h-[100px]">
+                        {furo.map(meld => ( <div key={meld.id} className="flex gap-1 border-r-4 border-green-700 pr-2 cursor-pointer" onClick={() => removeMeld(meld.id)} title="クリックして削除"> {meld.tiles.map((tile, i) => <Tile key={i} tile={tile} />)} </div> ))}
+                        {hand.map((tile) => ( <Tile key={tile.id} tile={tile} onClick={() => handleHandTileClick(tile)} isHandTile={true} isWinningTile={winTile?.id === tile.id} /> ))}
+                    </div>
+                </div>
+                
+                {/* --- Meld Creation Buttons --- */}
+                <div className="p-4 md:px-6 border-b">
+                     <h2 className="text-xl font-bold text-gray-700 mb-3">副露（フーロ）を追加</h2>
+                     <div className="flex gap-3">
+                        <button onClick={() => setModalState({isOpen: true, type: 'pon'})} className="bg-blue-500 text-white font-bold py-2 px-4 rounded hover:bg-blue-600">ポン</button>
+                        <button onClick={() => setModalState({isOpen: true, type: 'chi'})} className="bg-green-500 text-white font-bold py-2 px-4 rounded hover:bg-green-600">チー</button>
+                        <button onClick={() => setModalState({isOpen: true, type: 'kan'})} className="bg-red-500 text-white font-bold py-2 px-4 rounded hover:bg-red-600">カン</button>
+                     </div>
+                </div>
+
+                {/* --- Tile Selection Area --- */}
+                <div className="flex-grow flex flex-col p-4 md:p-6">
+                    <div className="flex border-b border-gray-200 mb-4">
+                        {[{id:"man",name:"萬子"},{id:"pin",name:"筒子"},{id:"sou",name:"索子"},{id:"jihai",name:"字牌"}].map(tab => (
+                            <button key={tab.id} onClick={() => setActiveTab(tab.id)} className={`py-2 px-4 md:px-6 font-semibold text-lg ${activeTab === tab.id ? 'border-b-2 border-blue-500 text-blue-600' : 'text-gray-500 hover:text-blue-500'}`}>
+                                {tab.name}
+                            </button>
+                        ))}
+                    </div>
+                    <div className="flex-grow bg-gray-50 p-4 rounded-b-lg">
+                        <div className="grid grid-cols-5 sm:grid-cols-9 gap-2">
+                            {TILE_DATA[activeTab].map(tile => (
+                                <button key={`${tile.type}${tile.value}`} onClick={() => addTileToHand(tile)} disabled={totalTiles >= 14} className="w-12 h-16 md:w-14 md:h-20 bg-white border-2 border-gray-300 rounded-md flex items-center justify-center shadow-md hover:border-blue-500 disabled:opacity-50">
+                                    <TileIcon type={tile.type} value={tile.value}/>
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+                </div>
+                
+                {/* --- Calculation Button and Result Display Area --- */}
+                <div className="p-4 md:p-6 border-t mt-auto">
+                    <button onClick={handleCalculate} disabled={isLoading || totalTiles !== 14 || !winTile} className="w-full bg-indigo-600 text-white font-bold text-xl py-3 px-4 rounded-lg hover:bg-indigo-700 disabled:bg-gray-400">
+                        {isLoading ? '計算中...' : '計算を実行する'}
+                    </button>
+                    {result && (
+                        <div className="mt-4 p-4 bg-gray-100 rounded-lg">
+                            {result.error ? (
+                                <p className="text-red-600 font-bold">{result.error}</p>
+                            ) : (
+                                <div>
+                                    <h3 className="text-lg font-bold text-gray-800">計算結果</h3>
+                                    <p className="text-2xl font-bold text-indigo-700">{result.score}</p>
+                                    <div className="mt-2">
+                                        <span className="font-bold">{result.han}翻 {result.fu}符</span>
+                                        <p className="text-gray-600">{result.yaku_list.join(' / ')}</p>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    )}
+                </div>
+            </div>
+        </div>
+    );
 }
