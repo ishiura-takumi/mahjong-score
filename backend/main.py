@@ -52,12 +52,25 @@ class CalculationResult(BaseModel):
 
 # --- データ変換ヘルパー (変更なし) ---
 def convert_to_library_format(tiles: List[Tile]) -> List[int]:
+    man = ''
+    pin = ''
+    sou = ''
+    honors = ''
     for t in tiles:
         print(f"Tile: type={t.type}, value={t.value}, is_red={t.isRed}, isRed={getattr(t, 'isRed', 'n/a')}")
-    """フロントエンドのTileリストをmahjongライブラリの整数リストに変換"""
-    tile_strings = [f"{'0' if t.isRed else t.value}{t.type}" for t in tiles]
-    print("tile_strings:", tile_strings)
-    return TilesConverter.string_to_136_array(tile_strings)
+        """フロントエンドのTileリストをmahjongライブラリの整数リストに変換"""
+        # tile_strings = [f"{'0' if t.isRed else t.value}{t.type}" for t in tiles]
+        if t.type == 'm':
+            man += '0' if t.isRed else str(t.value)
+        elif t.type == 'p':
+            pin += '0' if t.isRed else str(t.value)
+        elif t.type == 's':
+            sou += '0' if t.isRed else str(t.value)
+        elif t.type == 'z':
+            honors += str(t.value)
+    print(f"man: {man}, pin: {pin}, sou: {sou}, honors: {honors}")    
+    # print("tile_strings:", tile_strings)
+    return TilesConverter.string_to_136_array(man=man, pin=pin, sou=sou, honors=honors)
 
 def convert_furo_to_library_format(furo_list: List[Furo]) -> List[Meld]:
     """フロントエンドのFuroリストをmahjongライブラリのMeldリストに変換"""
@@ -77,8 +90,12 @@ calculator = HandCalculator()
 async def calculate_score(data: HandData):
     """手牌と状況設定を受け取り、点数計算の結果を返す"""
     try:
+        print("data.hand:", data.hand)
+        print(data.furo)
         hand_136 = convert_to_library_format(data.hand)
+        print("hand_136:", hand_136)
         melds = convert_furo_to_library_format(data.furo)
+        print(melds)
         win_tile_136 = convert_to_library_format([data.win_tile])[0]
         
         # 3. 点数計算の設定をフロントエンドからのデータで更新
