@@ -103,11 +103,13 @@ async def calculate_score(data: HandData):
             is_tsumo=data.is_tsumo,
             is_riichi=(data.riichi_state == 1),
             is_daburu_riichi=(data.riichi_state == 2),
-            player_wind=HandConfig.EAST, # 親と仮定 (今後の改善点)
-            round_wind=HandConfig.EAST, # 東場と仮定 (今後の改善点)
+            # player_wind=HandConfig.EAST, # 親と仮定 (今後の改善点)
+            player_wind=0,
+            # round_wind=HandConfig.EAST, # 東場と仮定 (今後の改善点)
+            round_wind=0
         )
 
-        result = calculator.estimate_hand(hand_136, win_tile_136, melds, config)
+        result = calculator.estimate_hand_value(hand_136, win_tile_136, melds, None, config)
 
         if not result.yaku:
             return CalculationResult(yaku_list=["役なし"], han=0, fu=0, score="0点", error="成立する役がありません。")
