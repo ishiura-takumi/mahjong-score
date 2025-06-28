@@ -43,6 +43,8 @@ export default function MahjongInput() {
     // NEW: State for game conditions
     const [isTsumo, setIsTsumo] = useState(false);
     const [riichiState, setRiichiState] = useState(0); // 0: none, 1: riichi, 2: double riichi
+    const [roundWind, setRoundWind] = useState('east'); // 'east', 'south'
+    const [playerWind, setPlayerWind] = useState('east');
 
     const furoTilesCount = useMemo(() => furo.reduce((sum, meld) => sum + meld.tiles.length, 0), [furo]);
     const totalTiles = useMemo(() => hand.length + furoTilesCount, [hand, furoTilesCount]);
@@ -105,7 +107,9 @@ export default function MahjongInput() {
                 win_tile: apiWinTile,
                 // NEW: Send game state
                 is_tsumo: isTsumo,
-                riichi_state: riichiState
+                riichi_state: riichiState,
+                round_wind: roundWind,
+                player_wind: playerWind,
             });
             setResult(response.data);
         } catch (error) {
@@ -170,23 +174,39 @@ export default function MahjongInput() {
                 </div>
                 <div className="flex-grow flex flex-col p-4 md:p-6"> <div className="flex border-b border-gray-200 mb-4"> {[{id:"man",name:"萬子"},{id:"pin",name:"筒子"},{id:"sou",name:"索子"},{id:"jihai",name:"字牌"}].map(tab => ( <button key={tab.id} onClick={() => setActiveTab(tab.id)} className={`py-2 px-4 md:px-6 font-semibold text-lg ${activeTab === tab.id ? 'border-b-2 border-blue-500 text-blue-600' : 'text-gray-500 hover:text-blue-500'}`}>{tab.name}</button> ))} </div> <div className="flex-grow bg-gray-50 p-4 rounded-b-lg"> <div className="grid grid-cols-5 sm:grid-cols-9 gap-2"> {TILE_DATA[activeTab].map(tile => ( <button key={`${tile.type}${tile.value}`} onClick={() => addTileToHand(tile)} disabled={totalTiles >= 14} className="w-12 h-16 md:w-14 md:h-20 bg-white border-2 border-gray-300 rounded-md flex items-center justify-center shadow-md hover:border-blue-500 disabled:opacity-50"><TileIcon type={tile.type} value={tile.value}/></button> ))} </div> </div> </div>
                 
-                {/* --- NEW: Game State Options --- */}
+                {/* --- Game State Options --- */}
                 <div className="p-4 md:p-6 border-t">
                     <h3 className="text-xl font-bold text-gray-700 mb-4">状況設定</h3>
                     <div className="space-y-4">
                         <div className="flex items-center gap-4">
-                            <span className="font-semibold w-20">和了方法</span>
+                            <span className="font-semibold text-gray-700 w-20">和了方法</span>
                             <div className="flex gap-2">
                                 <CustomRadio label="ロン" name="winType" value="ron" checked={!isTsumo} onChange={() => setIsTsumo(false)} />
                                 <CustomRadio label="ツモ" name="winType" value="tsumo" checked={isTsumo} onChange={() => setIsTsumo(true)} />
                             </div>
                         </div>
                         <div className="flex items-center gap-4">
-                            <span className="font-semibold w-20">リーチ</span>
+                            <span className="font-semibold text-gray-700 w-20">リーチ</span>
                             <div className="flex gap-2">
                                 <CustomRadio label="なし" name="riichi" value="0" checked={riichiState === 0} onChange={() => setRiichiState(0)} />
                                 <CustomRadio label="リーチ" name="riichi" value="1" checked={riichiState === 1} onChange={() => setRiichiState(1)} />
                                 <CustomRadio label="ダブル" name="riichi" value="2" checked={riichiState === 2} onChange={() => setRiichiState(2)} />
+                            </div>
+                        </div>
+                        <div className="flex items-center gap-4">
+                            <span className="font-semibold text-gray-700 w-20">場風</span>
+                            <div className="flex gap-2">
+                                <CustomRadio label="東" name="roundWind" value="east" checked={roundWind === 'east'} onChange={(e) => setRoundWind(e.target.value)} />
+                                <CustomRadio label="南" name="roundWind" value="south" checked={roundWind === 'south'} onChange={(e) => setRoundWind(e.target.value)} />
+                            </div>
+                        </div>
+                        <div className="flex items-center gap-4">
+                            <span className="font-semibold text-gray-700 w-20">自風</span>
+                            <div className="flex gap-2">
+                                <CustomRadio label="東（親）" name="playerWind" value="east" checked={playerWind === 'east'} onChange={(e) => setPlayerWind(e.target.value)} />
+                                <CustomRadio label="南" name="playerWind" value="south" checked={playerWind === 'south'} onChange={(e) => setPlayerWind(e.target.value)} />
+                                <CustomRadio label="西" name="playerWind" value="west" checked={playerWind === 'west'} onChange={(e) => setPlayerWind(e.target.value)} />
+                                <CustomRadio label="北" name="playerWind" value="north" checked={playerWind === 'north'} onChange={(e) => setPlayerWind(e.target.value)} />
                             </div>
                         </div>
                     </div>
@@ -206,7 +226,7 @@ export default function MahjongInput() {
                                         <h3 className="text-lg font-bold text-gray-800">計算結果</h3> 
                                         <p className="text-2xl font-bold text-indigo-700">{result.score}</p> 
                                         <div className="mt-2"> 
-                                            <span className="font-bold">{result.han}翻 {result.fu}符</span> 
+                                            <span className="text-gray-600 font-bold">{result.han}翻 {result.fu}符</span> 
                                             <p className="text-gray-600">{result.yaku_list.join(' / ')}</p> 
                                         </div> 
                                     </div> 
